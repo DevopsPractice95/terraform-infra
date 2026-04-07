@@ -1,0 +1,164 @@
+name: Terraform Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+
+      stage:
+        description: "Select Infrastructure Stage"
+        required: true
+        type: choice
+        options:
+          - vpc
+          - subnet
+          - igw
+          - route_table
+          - security_group
+          - ec2
+          - s3
+          - all
+
+      action:
+        description: "Terraform Action"
+        required: true
+        type: choice
+        options:
+          - apply
+          - destroy
+
+      instance_type:
+        description: "EC2 Instance Type"
+        required: false
+        default: "t3.micro"
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Show Folder Structure
+        run: |
+          echo "Current Directory:"
+          pwd
+          echo "Repository Structure:"
+          ls -R
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Format Check
+        run: terraform fmt -recursive
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: |
+          if [ "${{ github.event.inputs.stage }}" == "vpc" ]; then
+            terraform plan -target=module.vpc
+
+          elif [ "${{ github.event.inputs.stage }}" == "subnet" ]; then
+            terraform plan -target=module.subnet
+
+          elif [ "${{ github.event.inputs.stage }}" == "igw" ]; then
+            terraform plan -target=module.igw
+
+          elif [ "${{ github.event.inputs.stage }}" == "route_table" ]; then
+            terraform plan -target=module.route_table
+
+          elif [ "${{ github.event.inputs.stage }}" == "security_group" ]; then
+            terraform plan -target=module.security_group
+
+          elif [ "${{ github.event.inputs.stage }}" == "ec2" ]; then
+            terraform plan -target=module.ec2 -var="instance_type=${{ github.event.inputs.instance_type }}"
+
+          elif [ "${{ github.event.inputs.stage }}" == "s3" ]; then
+            terraform plan -target=module.s3
+
+          else
+            terraform plan
+          fi
+
+      - name: Terraform Apply
+        if: ${{ github.event.inputs.action == 'apply' }}
+        run: |
+          if [ "${{ github.event.inputs.stage }}" == "vpc" ]; then
+            terraform apply -auto-approve -target=module.vpc
+
+          elif [ "${{ github.event.inputs.stage }}" == "subnet" ]; then
+            terraform apply -auto-approve -target=module.subnet
+
+          elif [ "${{ github.event.inputs.stage }}" == "igw" ]; then
+            terraform apply -auto-approve -target=module.igw
+
+          elif [ "${{ github.event.inputs.stage }}" == "route_table" ]; then
+            terraform apply -auto-approve -target=module.route_table
+
+          elif [ "${{ github.event.inputs.stage }}" == "security_group" ]; then
+            terraform apply -auto-approve -target=module.security_group
+
+          elif [ "${{ github.event.inputs.stage }}" == "ec2" ]; then
+            terraform apply -auto-approve -target=module.ec2
+
+          elif [ "${{ github.event.inputs.stage }}" == "s3" ]; then
+            terraform apply -auto-approve -target=module.s3
+
+          else
+            terraform apply -auto-approve
+          fi
+
+      - name: Terraform Destroy
+        if: ${{ github.event.inputs.action == 'destroy' }}
+        run: |
+          if [ "${{ github.event.inputs.stage }}" == "vpc" ]; then
+            terraform destroy -auto-approve -target=module.vpc
+
+          elif [ "${{ github.event.inputs.stage }}" == "subnet" ]; then
+            terraform destroy -auto-approve -target=module.subnet
+
+          elif [ "${{ github.event.inputs.stage }}" == "igw" ]; then
+            terraform destroy -auto-approve -target=module.igw
+
+          elif [ "${{ github.event.inputs.stage }}" == "route_table" ]; then
+            terraform destroy -auto-approve -target=module.route_table
+
+          elif [ "${{ github.event.inputs.stage }}" == "security_group" ]; then
+            terraform destroy -auto-approve -target=module.security_group
+
+          elif [ "${{ github.event.inputs.stage }}" == "ec2" ]; then
+            terraform destroy -auto-approve -target=module.ec2
+
+          elif [ "${{ github.event.inputs.stage }}" == "s3" ]; then
+            terraform destroy -auto-approve -target=module.s3
+
+          else
+            terraform destroy -auto-approve
+          fi
+
+      - name: Show Terraform Outputs
+        run: terraform output || true
+
+      - name: Cleanup Workspace
+        if: always()
+        run: |
+          echo "Cleaning workspace..."
+          rm -rf .terraform
+          rm -f terraform.tfstate*
