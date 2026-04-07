@@ -38,7 +38,7 @@ variable "subnet_cidr" {
   type        = string
 }
 
-variable "security_group_id" {
+variable "security_group.sg_id" {
   description = "Security group for EC2"
   type        = string
 }
