@@ -7,7 +7,7 @@ instance_name = "parida-ec2"
 
 key_name = "terraform-key"
 
-bucket_name = "punit-demo-s3-bucket-12345"
+bucket_name = "punit-terraform-state-bucket"
 
 vpc_cidr = "10.0.0.0/16"
 
